@@ -4,6 +4,7 @@
 #define UNICODE
 #endif
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <stdio.h>
 #include <iostream>
 #include <dlfcn.h>
@@ -12,6 +13,7 @@
 #include "Kinova.API.CommLayerUbuntu.h"
 #include "Kinova.API.UsbCommandLayerUbuntu.h"
 #include <unistd.h>
+#include <array>
 
 using namespace std;
 namespace py = pybind11;
@@ -60,7 +62,7 @@ int (*MySetPositionLimitDistance)(float Command[COMMAND_SIZE]);
 int (*MySetActuatorPID)(unsigned int address, float P, float I, float D);
 int (*MyRefresDevicesList)();
 
-KinovaDevice kinova_list[MAX_KINOVA_DEVICE];
+KinovaDevice k_list[MAX_KINOVA_DEVICE];
 int devicesCount;
 
 class Jaco2
@@ -117,6 +119,8 @@ public:
         MyGetGlobalTrajectoryInfo = (int (*)(TrajectoryFIFO &Response))dlsym(commandLayer_handle, "GetGlobalTrajectoryInfo");
         MyRefresDevicesList = (int (*)())dlsym(commandLayer_handle, "RefresDevicesList");
 
+        //        MySendJoystickCommand
+
         // Verify that all functions has been loaded correctly
         if ((MyInitAPI == NULL) || (MyCloseAPI == NULL) || (MySendBasicTrajectory == NULL) ||
             (MyGetDevices == NULL) || (MySetActiveDevice == NULL) || (MyGetCartesianCommand == NULL) ||
@@ -133,13 +137,18 @@ public:
 
             cout << "Initialization's result :" << result << endl;
 
-            devicesCount = MyGetDevices(kinova_list, result);
+            devicesCount = MyGetDevices(k_list, result);
 
-            cout << "Found" << devicesCount << " Devices." << endl;
+            cout << "Found " << devicesCount << " Devices." << endl;
 
             for (int i = 0; i < devicesCount; i++)
             {
-                cout << "Found a robot on the USB bus (" << kinova_list[i].SerialNumber << ")" << endl;
+                cout << i + 1 << ":Robot on USB(" << k_list[i].SerialNumber << ")" << k_list[i].Model << "Type:" << k_list[i].DeviceType << " Ver:";
+                cout << k_list[i].VersionMajor << "." << k_list[i].VersionMinor << "." << k_list[i].VersionRelease << endl;
+            }
+            if (devicesCount > 0)
+            { // we just use 1st device for this lib.
+                MySetActiveDevice(k_list[0]);
             }
         }
     };
@@ -148,6 +157,45 @@ public:
     {
         printf("JACO2 initialized\n");
     };
+
+    std::array<float, 6> getCartesianPoint()
+    {
+        CartesianPosition cp;
+        cp.InitStruct(); // initialize
+
+        int ret = MyGetCartesianPosition(cp);
+        cout << "Get Cartesian" << ret << endl;
+
+        std::array<float, 6> coord =
+            {cp.Coordinates.X,
+             cp.Coordinates.Y,
+             cp.Coordinates.Z,
+             cp.Coordinates.ThetaX,
+             cp.Coordinates.ThetaY,
+             cp.Coordinates.ThetaZ};
+
+        //        cout << "Coord:" << coord << endl;
+        // 本当は CartesianPosition を返したい
+
+        return coord;
+    }
+    // Python 経由でセンサーデータを取得
+
+    int sendTrajectory(const std::array<float, 6> &coord)
+    {
+        TrajectoryPoint tp;
+        CartesianInfo *ci = &tp.Position.CartesianPosition;
+        tp.InitStruct();
+
+        ci->X = coord[0];
+        ci->Y = coord[1];
+        ci->Z = coord[2];
+        ci->ThetaX = coord[3];
+        ci->ThetaY = coord[4];
+        ci->ThetaZ = coord[5];
+        cout << "Got Floats!" << coord[0] << endl;
+        return 0;
+    }
 
 private:
     int programResult = 0;
@@ -159,5 +207,7 @@ PYBIND11_MODULE(jacomodule, m)
 
     py::class_<Jaco2>(m, "Jaco2")
         .def(py::init<>())
-        .def("start", &Jaco2::start);
+        .def("start", &Jaco2::start)
+        .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
+        .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates");
 }
