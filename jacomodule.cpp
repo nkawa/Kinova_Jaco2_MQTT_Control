@@ -156,7 +156,16 @@ public:
     void start()
     {
         printf("JACO2 initialized\n");
+
+        int ret = MyInitFingers();
+        printf("Init Finger %d\n", ret);
     };
+
+    void moveHome()
+    {
+        int ret = MyMoveHome();
+        printf("My MoveHome %d\n", ret);
+    }
 
     std::array<float, 6> getCartesianPoint()
     {
@@ -187,6 +196,8 @@ public:
         CartesianInfo *ci = &tp.Position.CartesianPosition;
         tp.InitStruct();
 
+        tp.Position.Type = CARTESIAN_POSITION; // set Position
+
         ci->X = coord[0];
         ci->Y = coord[1];
         ci->Z = coord[2];
@@ -194,6 +205,8 @@ public:
         ci->ThetaY = coord[4];
         ci->ThetaZ = coord[5];
         cout << "Got Floats!" << coord[0] << endl;
+
+        //      int ret = MySendBasicTrajectory(tp);
         return 0;
     }
 
@@ -208,6 +221,7 @@ PYBIND11_MODULE(jacomodule, m)
     py::class_<Jaco2>(m, "Jaco2")
         .def(py::init<>())
         .def("start", &Jaco2::start)
+        .def("moveHome", &Jaco2::moveHome, "Move to Home")
         .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
         .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates");
 }
