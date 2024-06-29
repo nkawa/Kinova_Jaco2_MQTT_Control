@@ -18,6 +18,8 @@
 using namespace std;
 namespace py = pybind11;
 
+#define KINOVA_NO_ERR 1
+
 // A handle to the API.
 void *commandLayer_handle;
 
@@ -131,24 +133,20 @@ public:
         }
         else
         {
-            cout << "I N I T I A L I Z A T I O N   C O M P L E T E D" << endl
-                 << endl;
+            cout << "Kinova API Initialized" << endl;
             int result = (*MyInitAPI)();
-
-            cout << "Initialization's result :" << result << endl;
-
+            //            cout << "Initialization's result :" << result << endl;
             devicesCount = MyGetDevices(k_list, result);
-
             cout << "Found " << devicesCount << " Devices." << endl;
-
             for (int i = 0; i < devicesCount; i++)
             {
-                cout << i + 1 << ":Robot on USB(" << k_list[i].SerialNumber << ")" << k_list[i].Model << "Type:" << k_list[i].DeviceType << " Ver:";
+                cout << i + 1 << ":Robot on USB:" << k_list[i].SerialNumber << ", " << k_list[i].Model << " Type:" << k_list[i].DeviceType << " Ver: ";
                 cout << k_list[i].VersionMajor << "." << k_list[i].VersionMinor << "." << k_list[i].VersionRelease << endl;
             }
             if (devicesCount > 0)
             { // we just use 1st device for this lib.
                 MySetActiveDevice(k_list[0]);
+                cout << "Device " << 1 << " activated" << endl;
             }
         }
     };
@@ -173,8 +171,7 @@ public:
         cp.InitStruct(); // initialize
 
         int ret = MyGetCartesianPosition(cp);
-        cout << "Get Cartesian" << ret << endl;
-
+        cout << "Get Cartesian: " << ret << endl;
         std::array<float, 6> coord =
             {cp.Coordinates.X,
              cp.Coordinates.Y,
@@ -183,6 +180,12 @@ public:
              cp.Coordinates.ThetaY,
              cp.Coordinates.ThetaZ};
 
+        if (ret != KINOVA_NO_ERR)
+        {
+            cout << "Umm Errr on Get Cartesian" << endl;
+            cp.Coordinates.X = -25555;
+        }
+
         //        cout << "Coord:" << coord << endl;
         // 本当は CartesianPosition を返したい
 
@@ -190,13 +193,17 @@ public:
     }
     // Python 経由でセンサーデータを取得
 
+    int setCartesianControl()
+    {
+        return MySetCartesianControl();
+    }
+
     int sendTrajectory(const std::array<float, 6> &coord)
     {
         TrajectoryPoint tp;
-        CartesianInfo *ci = &tp.Position.CartesianPosition;
         tp.InitStruct();
-
         tp.Position.Type = CARTESIAN_POSITION; // set Position
+        CartesianInfo *ci = &tp.Position.CartesianPosition;
 
         ci->X = coord[0];
         ci->Y = coord[1];
@@ -204,10 +211,10 @@ public:
         ci->ThetaX = coord[3];
         ci->ThetaY = coord[4];
         ci->ThetaZ = coord[5];
-        cout << "Got Floats!" << coord[0] << endl;
 
-        //      int ret = MySendBasicTrajectory(tp);
-        return 0;
+        //        cout << "Got Floats! " << coord[0] << endl;
+        int ret = MySendBasicTrajectory(tp);
+        return ret;
     }
 
 private:
@@ -223,5 +230,6 @@ PYBIND11_MODULE(jacomodule, m)
         .def("start", &Jaco2::start)
         .def("moveHome", &Jaco2::moveHome, "Move to Home")
         .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
+        .def("setCartesianControl", &Jaco2::setCartesianControl, "Set Cartesian Control")
         .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates");
 }
