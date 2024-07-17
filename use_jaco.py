@@ -12,7 +12,9 @@ ret = robot.getCartesianPoint()
 
 print(ret)
 
-robot.sendTrajectory(ret)
+#robot.sendTrajectory(ret)
 
 
+angle = robot.getAngularPosition()
 
+print("Angle:",angle)

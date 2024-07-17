@@ -214,7 +214,56 @@ public:
 
         //        cout << "Got Floats! " << coord[0] << endl;
         int ret = MySendBasicTrajectory(tp);
+
         return ret;
+    }
+
+    std::array<float, 6> getAngularPosition()
+    {
+        //        MyGetAngularCommand
+        AngularPosition ap;
+        ap.InitStruct(); // may be share ..
+        int ret = MyGetAngularPosition(ap);
+
+        if (ret != KINOVA_NO_ERR)
+        {
+            cout << "Errr on Get AngularPosition" << endl;
+            ap.Actuators.Actuator1 = -25555;
+        }
+
+        std::array<float, 6> angle =
+            {ap.Actuators.Actuator1,
+             ap.Actuators.Actuator2,
+             ap.Actuators.Actuator3,
+             ap.Actuators.Actuator4,
+             ap.Actuators.Actuator5,
+             ap.Actuators.Actuator6};
+
+        return angle;
+    }
+
+    std::array<float, 6> getAngularCommand()
+    {
+        //        MyGetAngularCommand
+        AngularPosition ap;
+        ap.InitStruct(); // may be share ..
+        int ret = MyGetAngularCommand(ap);
+
+        if (ret != KINOVA_NO_ERR)
+        {
+            cout << "Errr on Get AngularCommand" << endl;
+            ap.Actuators.Actuator1 = -25555;
+        }
+
+        std::array<float, 6> angle =
+            {ap.Actuators.Actuator1,
+             ap.Actuators.Actuator2,
+             ap.Actuators.Actuator3,
+             ap.Actuators.Actuator4,
+             ap.Actuators.Actuator5,
+             ap.Actuators.Actuator6};
+
+        return angle;
     }
 
 private:
@@ -231,5 +280,7 @@ PYBIND11_MODULE(jacomodule, m)
         .def("moveHome", &Jaco2::moveHome, "Move to Home")
         .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
         .def("setCartesianControl", &Jaco2::setCartesianControl, "Set Cartesian Control")
+        .def("getAngularPosition", &Jaco2::getAngularPosition, "A function that returns current Jaco2 angles")
+        .def("getAngularCommand", &Jaco2::getAngularCommand, "A function that returns current Jaco2 angle command")
         .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates");
 }
