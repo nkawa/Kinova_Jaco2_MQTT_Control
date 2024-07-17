@@ -31,6 +31,7 @@ int (*MyGetDevices)(KinovaDevice devices[MAX_KINOVA_DEVICE], int &result);
 int (*MySetActiveDevice)(KinovaDevice device);
 
 // int(*MyGetAngularCommand)(AngularPosition &);
+int (*MySetAngularControl)();
 int (*MyGetAngularPosition)(AngularPosition &);
 int (*MyGetAngularCommand)(AngularPosition &);
 int (*MyGetAngularVelocity)(AngularPosition &Response);
@@ -85,6 +86,7 @@ public:
 
         MyGetDevices = (int (*)(KinovaDevice devices[MAX_KINOVA_DEVICE], int &result))dlsym(commandLayer_handle, "GetDevices");
         MySetActiveDevice = (int (*)(KinovaDevice devices))dlsym(commandLayer_handle, "SetActiveDevice");
+        MySetAngularControl = (int (*)())dlsym(commandLayer_handle, "SetAngularControl");
         MyGetAngularCommand = (int (*)(AngularPosition &))dlsym(commandLayer_handle, "GetAngularCommand");
         MyGetAngularPosition = (int (*)(AngularPosition &))dlsym(commandLayer_handle, "GetAngularPosition");
         MyGetAngularVelocity = (int (*)(AngularPosition &))dlsym(commandLayer_handle, "GetAngularVelocity");
@@ -133,6 +135,12 @@ public:
         }
         else
         {
+
+            if ((MySetAngularControl == NULL))
+            {
+                cout << "Cant initialize AngularControl" << endl;
+            }
+
             cout << "Kinova API Initialized" << endl;
             int result = (*MyInitAPI)();
             //            cout << "Initialization's result :" << result << endl;
@@ -198,6 +206,11 @@ public:
         return MySetCartesianControl();
     }
 
+    int setAngularControl()
+    {
+        return MySetAngularControl();
+    }
+
     int sendTrajectory(const std::array<float, 6> &coord)
     {
         TrajectoryPoint tp;
@@ -215,6 +228,27 @@ public:
         //        cout << "Got Floats! " << coord[0] << endl;
         int ret = MySendBasicTrajectory(tp);
 
+        return ret;
+    }
+
+    int sendAngleTrajectory(const std::array<float, 6> &coord)
+    {
+        TrajectoryPoint tp;
+        tp.InitStruct();
+        tp.Position.Type = ANGULAR_POSITION; // set Position
+        AngularInfo *ai = &tp.Position.Actuators;
+
+        ai->Actuator1 = coord[0];
+        ai->Actuator2 = coord[1];
+        ai->Actuator3 = coord[2];
+        ai->Actuator4 = coord[3];
+        ai->Actuator5 = coord[4];
+        ai->Actuator6 = coord[5];
+
+        //        cout << "Got Floats! " << coord[0] << endl;
+        //        cout << "Got Floats! " << coord[0] << endl;
+        int ret = MySendAdvanceTrajectory(tp);
+        //        cout << "Send Angular Position " << ret << endl;
         return ret;
     }
 
@@ -266,6 +300,15 @@ public:
         return angle;
     }
 
+    // not yet implemented
+    int sendAngularTorqueCommand(std::array<float, 6>)
+    {
+        float command[70];
+
+        int ret = MySendAngularTorqueCommand(command);
+        return ret;
+    }
+
 private:
     int programResult = 0;
 };
@@ -280,7 +323,9 @@ PYBIND11_MODULE(jacomodule, m)
         .def("moveHome", &Jaco2::moveHome, "Move to Home")
         .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
         .def("setCartesianControl", &Jaco2::setCartesianControl, "Set Cartesian Control")
+        .def("setAngularControl", &Jaco2::setAngularControl, "Set Angular Control")
         .def("getAngularPosition", &Jaco2::getAngularPosition, "A function that returns current Jaco2 angles")
         .def("getAngularCommand", &Jaco2::getAngularCommand, "A function that returns current Jaco2 angle command")
-        .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates");
+        .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates")
+        .def("sendAngleTrajectory", &Jaco2::sendAngleTrajectory, "A function that sends angles");
 }
