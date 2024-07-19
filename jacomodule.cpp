@@ -30,6 +30,7 @@ int (*MyGetGeneralInformations)(GeneralInformations &Response);
 int (*MyGetDevices)(KinovaDevice devices[MAX_KINOVA_DEVICE], int &result);
 int (*MySetActiveDevice)(KinovaDevice device);
 
+int (*MyEraseAllTrajectories)();
 // int(*MyGetAngularCommand)(AngularPosition &);
 int (*MySetAngularControl)();
 int (*MyGetAngularPosition)(AngularPosition &);
@@ -123,6 +124,8 @@ public:
         MyGetGlobalTrajectoryInfo = (int (*)(TrajectoryFIFO &Response))dlsym(commandLayer_handle, "GetGlobalTrajectoryInfo");
         MyRefresDevicesList = (int (*)())dlsym(commandLayer_handle, "RefresDevicesList");
 
+        //        MyEraseAllTrajectories = (int (*)())dlsym(commandLayer_handle, "EraseAllTrajectories");
+        //
         //        MySendJoystickCommand
 
         // Verify that all functions has been loaded correctly
@@ -136,9 +139,9 @@ public:
         else
         {
 
-            if ((MySetAngularControl == NULL))
+            if ((MySetAngularControl == NULL)) //|| (MyEraseAllTrajectories == NULL))
             {
-                cout << "Cant initialize AngularControl" << endl;
+                cout << "Cant initialize AngularControl or EraseAllTrajectories" << endl;
             }
 
             cout << "Kinova API Initialized" << endl;
@@ -209,6 +212,12 @@ public:
     int setAngularControl()
     {
         return MySetAngularControl();
+    }
+
+    int eraseAllTrajectories()
+    {
+        //        return MyEraseAllTrajectories();
+        return -1;
     }
 
     int sendTrajectory(const std::array<float, 6> &coord)
@@ -324,6 +333,7 @@ PYBIND11_MODULE(jacomodule, m)
         .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
         .def("setCartesianControl", &Jaco2::setCartesianControl, "Set Cartesian Control")
         .def("setAngularControl", &Jaco2::setAngularControl, "Set Angular Control")
+        .def("eraseAllTrajectories", &Jaco2::eraseAllTrajectories, "erase All Trajectories")
         .def("getAngularPosition", &Jaco2::getAngularPosition, "A function that returns current Jaco2 angles")
         .def("getAngularCommand", &Jaco2::getAngularCommand, "A function that returns current Jaco2 angle command")
         .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates")
