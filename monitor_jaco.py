@@ -7,7 +7,9 @@ robot = jacomodule.Jaco2()
 
 time.sleep(1)
 
-robot.start()
+robot.startControlAPI()
+
+#robot.start()
 
 #ret = robot.getCartesianPoint()
 
@@ -37,8 +39,15 @@ client.loop_start()   # 通信処理開始
 while True:
     angle = robot.getAngularPosition()
     print("Angle:",angle)
+    if angle[0]==-25555.0:
+        print("Check!! We need to restart!")
+        time.sleep(1)
+        robot = jacomodule.Jaco2()
+        robot.startControlAPI()
+#        robot.start()
+
     client.publish("kinova/real",json.dumps(angle))
-    time.sleep(0.1)
+    time.sleep(0.15)
 
 
 

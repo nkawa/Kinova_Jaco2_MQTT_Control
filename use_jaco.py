@@ -18,3 +18,15 @@ print(ret)
 angle = robot.getAngularPosition()
 
 print("Angle:",angle)
+
+ret = robot.setAngularControl()
+#ret = robot.setCartesianControl()
+print("Set AngularControl",ret)
+angle[5]=180
+angle[4]=180
+
+print("SendAngle:",angle)
+
+ret = robot.sendAngleTrajectory(angle)
+
+print("Set Angle",ret)

@@ -53,6 +53,7 @@ int (*MySendBasicTrajectory)(TrajectoryPoint command);
 int (*MySendAngularTorqueCommand)(float Command[COMMAND_SIZE]);
 int (*MyGetCodeVersion)(int Response[CODE_VERSION_COUNT]);
 int (*MyStartForceControl)();
+int (*MyStartControlAPI)();
 int (*MyStopForceControl)();
 int (*MyGetEndEffectorOffset)(unsigned int *, float *, float *, float *);
 int (*MySetEndEffectorOffset)(unsigned int status, float x, float y, float z);
@@ -124,6 +125,7 @@ public:
         MyGetGlobalTrajectoryInfo = (int (*)(TrajectoryFIFO &Response))dlsym(commandLayer_handle, "GetGlobalTrajectoryInfo");
         MyRefresDevicesList = (int (*)())dlsym(commandLayer_handle, "RefresDevicesList");
 
+        MyStartControlAPI = (int (*)())dlsym(commandLayer_handle, "StartControlAPI");
         //        MyEraseAllTrajectories = (int (*)())dlsym(commandLayer_handle, "EraseAllTrajectories");
         //
         //        MySendJoystickCommand
@@ -161,6 +163,12 @@ public:
             }
         }
     };
+
+    int startControlAPI()
+    {
+        int ret = MyStartControlAPI();
+        return ret;
+    }
 
     void start()
     {
@@ -270,7 +278,7 @@ public:
 
         if (ret != KINOVA_NO_ERR)
         {
-            cout << "Errr on Get AngularPosition" << endl;
+            cout << "Errr on Get AngularPosition:CODE " << ret << endl;
             ap.Actuators.Actuator1 = -25555;
         }
 
@@ -329,6 +337,7 @@ PYBIND11_MODULE(jacomodule, m)
     py::class_<Jaco2>(m, "Jaco2")
         .def(py::init<>())
         .def("start", &Jaco2::start)
+        .def("startControlAPI", &Jaco2::startControlAPI, "Start Conroling API")
         .def("moveHome", &Jaco2::moveHome, "Move to Home")
         .def("getCartesianPoint", &Jaco2::getCartesianPoint, "A function that returns current Jaco2 coordinates")
         .def("setCartesianControl", &Jaco2::setCartesianControl, "Set Cartesian Control")
