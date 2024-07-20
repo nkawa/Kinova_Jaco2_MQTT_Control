@@ -30,8 +30,11 @@ int (*MyGetGeneralInformations)(GeneralInformations &Response);
 int (*MyGetDevices)(KinovaDevice devices[MAX_KINOVA_DEVICE], int &result);
 int (*MySetActiveDevice)(KinovaDevice device);
 
+int (*MyGetSystemError)(unsigned int, SystemError &);
+int (*MyGetSystemErrorCount)(unsigned int &);
+int (*MyClearErrorLog)();
+
 int (*MyEraseAllTrajectories)();
-// int(*MyGetAngularCommand)(AngularPosition &);
 int (*MySetAngularControl)();
 int (*MyGetAngularPosition)(AngularPosition &);
 int (*MyGetAngularCommand)(AngularPosition &);
@@ -126,6 +129,11 @@ public:
         MyRefresDevicesList = (int (*)())dlsym(commandLayer_handle, "RefresDevicesList");
 
         MyStartControlAPI = (int (*)())dlsym(commandLayer_handle, "StartControlAPI");
+
+        MyClearErrorLog = (int (*)())dlsym(commandLayer_handle, "ClearErrorLog");
+        MyGetSystemErrorCount = (int (*)(unsigned int &))dlsym(commandLayer_handle, "GetSystemErrorCount");
+        MyGetSystemError = (int (*)(unsigned int, SystemError &))dlsym(commandLayer_handle, "GetSystemError");
+
         //        MyEraseAllTrajectories = (int (*)())dlsym(commandLayer_handle, "EraseAllTrajectories");
         //
         //        MySendJoystickCommand
@@ -170,13 +178,33 @@ public:
         return ret;
     }
 
+    int clearErrorLog()
+    {
+        int ret = MyClearErrorLog();
+        return ret;
+    }
+
+    std::tuple<int, int> getSystemErrorCount()
+    {
+        unsigned int errorCount;
+        int ret = MyGetSystemErrorCount(errorCount);
+        return std::make_tuple(ret, errorCount);
+    }
+
+    std::tuple<int, SystemError> getSystemError(int num)
+    {
+        SystemError errTmp;
+        int ret = MyGetSystemError(num, errTmp);
+        return std::make_tuple(ret, errTmp);
+    }
+
     void start()
     {
         printf("JACO2 initialized\n");
 
         int ret = MyInitFingers();
         printf("Init Finger %d\n", ret);
-    };
+    }
 
     void moveHome()
     {
@@ -334,6 +362,13 @@ PYBIND11_MODULE(jacomodule, m)
 {
     m.doc() = "pybind11 jacomodule plugin";
 
+    py::class_<SystemError>(m, "SystemError")
+        .def_readwrite("header", &SystemError::ErrorHeader)
+        .def_readwrite("type", &SystemError::ErrorType)
+        .def_readwrite("firmware", &SystemError::FirmwareVersion)
+        .def_readwrite("keosVersion", &SystemError::KeosVersion)
+        .def_readwrite("systemTime", &SystemError::SystemTime);
+
     py::class_<Jaco2>(m, "Jaco2")
         .def(py::init<>())
         .def("start", &Jaco2::start)
@@ -346,5 +381,8 @@ PYBIND11_MODULE(jacomodule, m)
         .def("getAngularPosition", &Jaco2::getAngularPosition, "A function that returns current Jaco2 angles")
         .def("getAngularCommand", &Jaco2::getAngularCommand, "A function that returns current Jaco2 angle command")
         .def("sendTrajectory", &Jaco2::sendTrajectory, "A function that sends coordinates")
+        .def("clearErrorLog", &Jaco2::clearErrorLog, "Clear error")
+        .def("getSystemErrorCount", &Jaco2::getSystemErrorCount, "Get Error Count")
+        .def("getSystemError", &Jaco2::getSystemError, "Get System Error ")
         .def("sendAngleTrajectory", &Jaco2::sendAngleTrajectory, "A function that sends angles");
 }
